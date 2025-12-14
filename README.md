@@ -184,3 +184,4 @@ MIT License — free to use, modify, and extend.
 
 Shujahat Jadoon
 Backend • Automation • AI Systems
+GitHub: https://github.com/jadoondevs
