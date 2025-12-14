@@ -1,0 +1,273 @@
+{
+  "name": "Gym Agent – Daily Stats (v1)",
+  "nodes": [
+    {
+      "parameters": {
+        "fieldToSplitOut": "data",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        832,
+        0
+      ],
+      "id": "a6cd4e58-4c5e-4396-8d74-902d4c768299",
+      "name": "Split Out"
+    },
+    {
+      "parameters": {
+        "jsCode": "return items.map(item => {\n  const member = item.json;\n\n  return {\n    json: {\n      id: member.id,\n      name: member.name,\n      plan: member.membership_plan,\n      status: member.status,\n      risk:\n        member.membership_plan?.toLowerCase() === \"gold\" ||\n        member.membership_plan?.toLowerCase() === \"platinum\"\n          ? \"high-value\"\n          : \"standard\"\n    }\n  };\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1024,
+        128
+      ],
+      "id": "67adff2a-c309-4248-922c-c1dea54bd02c",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "=members",
+        "include": "specifiedFields",
+        "fieldsToInclude": "risk",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        1216,
+        0
+      ],
+      "id": "4ed2e190-a10b-4950-aad3-d6d58e3b9c8a",
+      "name": "Aggregate"
+    },
+    {
+      "parameters": {
+        "jsCode": "const aggregated = $input.all()[0].json;\n\nreturn [{\n  json: {\n    messages: [\n      {\n        role: \"system\",\n        content: \"You are a gym operations assistant.\"\n      },\n      {\n        role: \"user\",\n        content: `\nHere is today's aggregated gym member data:\n\n${JSON.stringify(aggregated, null, 2)}\n\nTasks:\n1. Summarize member distribution\n2. Identify high-risk members\n3. Suggest ONE actionable improvement for the gym owner\n\nBe concise and practical.\n`\n      }\n    ]\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1568,
+        144
+      ],
+      "id": "65fbd785-9b19-4975-8dff-6de99787e69d",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_API"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"llama-3.1-8b-instant\",\n  \"messages\": {{ JSON.stringify($json.messages) }},\n  \"temperature\": 0.3\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1808,
+        208
+      ],
+      "id": "2b25e420-d882-4823-ad09-95d9aacc60b6",
+      "name": "HTTP Request1"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 9
+            },
+            {}
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        368,
+        16
+      ],
+      "id": "ffa92cc7-6b34-4a41-acdd-bc656a79b4bd",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{\n  json: {\n    subject: \"📊 Daily Gym AI Report\",\n    body: $json.choices[0].message.content\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2032,
+        144
+      ],
+      "id": "3e3a4029-05ca-4e56-b887-0260d88a8fbc",
+      "name": "Code in JavaScript2"
+    },
+    {
+      "parameters": {
+        "fromEmail": "mail@gmail.com",
+        "toEmail": "mail@gmail.com",
+        "subject": "={{$json.subject}}",
+        "html": "={{$json.body}}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        2272,
+        0
+      ],
+      "id": "aad1164b-a722-4f1c-ad9c-7dd602352c43",
+      "name": "Send email"
+      
+    },
+    {
+      "parameters": {
+        "url": "https://yhmfkcnlskabyfqciivy.supabase.co/functions/v1/members",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_SERVICE_ROLE_KEY"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        624,
+        224
+      ],
+      "id": "1a1f1b0d-9507-48fd-af17-799e54ed0644",
+      "name": "GET members"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Split Out": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "GET members",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript2": {
+      "main": [
+        [
+          {
+            "node": "Send email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GET members": {
+      "main": [
+        [
+          {
+            "node": "Split Out",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timeSavedMode": "fixed",
+    "timezone": "Asia/Karachi",
+    "saveExecutionProgress": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },  
+  "id": "a3JbGIHchdAaN5Ez",
+  "tags": []
+}
